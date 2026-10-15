@@ -288,13 +288,60 @@ describe('classifyInvalidParams', () => {
     expect(classifyInvalidParams(err)).toBeUndefined();
   });
 
+  it('returns `title_too_large` when the body mentions title overflow (ntfy 40057)', () => {
+    const err = new McpError(JsonRpcErrorCode.InvalidParams, 'ntfy returned HTTP 400 Bad Request', {
+      body: '{"code":40057,"http":400,"error":"invalid request: title is too large"}',
+    });
+    expect(classifyInvalidParams(err)).toBe('title_too_large');
+  });
+
+  it('returns `title_too_large` when the message mentions title overflow', () => {
+    const err = new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      'ntfy returned HTTP 400 Bad Request: invalid request: title is too large',
+    );
+    expect(classifyInvalidParams(err)).toBe('title_too_large');
+  });
+
+  it('returns `tags_too_large` when the body mentions tags overflow (ntfy 40058)', () => {
+    const err = new McpError(JsonRpcErrorCode.InvalidParams, 'ntfy returned HTTP 400 Bad Request', {
+      body: '{"code":40058,"http":400,"error":"invalid request: tags are too large"}',
+    });
+    expect(classifyInvalidParams(err)).toBe('tags_too_large');
+  });
+
+  it('returns `tags_too_large` when the message mentions tags overflow', () => {
+    const err = new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      'ntfy returned HTTP 400 Bad Request: invalid request: tags are too large',
+    );
+    expect(classifyInvalidParams(err)).toBe('tags_too_large');
+  });
+
   it('payload_too_large takes precedence when both keywords are present', () => {
-    // Order in the implementation: attachment URL, then "too large", then
-    // email/phone/verified. Lock that in so a refactor doesn't silently flip it.
+    // Order in the implementation: attachment URL, then title/tag overflow, then
+    // generic "too large", then email/phone/verified. Lock that in so a refactor
+    // doesn't silently flip it.
     const err = new McpError(
       JsonRpcErrorCode.InvalidParams,
       'attachment too large; email recipient also unverified',
     );
     expect(classifyInvalidParams(err)).toBe('payload_too_large');
+  });
+
+  it('title_too_large takes precedence over generic payload_too_large', () => {
+    const err = new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      'title too large; also the body is huge',
+    );
+    expect(classifyInvalidParams(err)).toBe('title_too_large');
+  });
+
+  it('tags_too_large takes precedence over generic payload_too_large', () => {
+    const err = new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      'tags too large; also the body is huge',
+    );
+    expect(classifyInvalidParams(err)).toBe('tags_too_large');
   });
 });

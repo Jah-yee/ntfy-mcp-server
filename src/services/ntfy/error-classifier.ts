@@ -120,13 +120,25 @@ export function isUpstreamUnreachable(err: unknown): boolean {
  * an attachment is not one, since ntfy's "attachment URL is invalid" rejection
  * needs the opposite advice from "shorten the payload". Oversize *bodies* come
  * back as HTTP 413, which callers classify from `getDataStatus` instead.
+ *
+ * ntfy issues specific error codes for title and tags overflow (40057 and 40058);
+ * these must be checked before the general "too large" branch so they receive
+ * field-specific recovery hints rather than the body-shortening generic advice.
  */
 export function classifyInvalidParams(
   err: unknown,
-): 'invalid_attachment' | 'payload_too_large' | 'unverified_contact' | undefined {
+): 'invalid_attachment' | 'payload_too_large' | 'unverified_contact' | 'title_too_large' | 'tags_too_large' | undefined {
   const haystack = `${getMessage(err)} ${getDataBody(err)}`.toLowerCase();
   if (haystack.includes('attachment url')) {
     return 'invalid_attachment';
+  }
+  // Check field-specific overflows before the generic body-too-large branch so
+  // each gets its own reason and per-field recovery hint (issues #35, #29).
+  if (haystack.includes('title') && haystack.includes('too large')) {
+    return 'title_too_large';
+  }
+  if ((haystack.includes('tag') || haystack.includes('tags')) && haystack.includes('too large')) {
+    return 'tags_too_large';
   }
   if (haystack.includes('too large')) {
     return 'payload_too_large';

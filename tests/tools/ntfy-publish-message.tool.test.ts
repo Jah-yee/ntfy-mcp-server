@@ -295,6 +295,48 @@ describe('ntfyPublishMessage handler', () => {
     });
   });
 
+  it('maps a 4xx with title-overflow hint to `title_too_large` with per-field hint', async () => {
+    const svc = freshService();
+    vi.spyOn(svc, 'publish').mockRejectedValue(
+      new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        'ntfy returned HTTP 400 Bad Request: invalid request: title is too large',
+        { status: 400, body: '{"code":40057,"http":400,"error":"invalid request: title is too large"}' },
+      ),
+    );
+    const result = await runToolContract(ntfyPublishMessage, { topic: 'alerts', message: 'x' });
+    const error = (
+      result.structuredContent as {
+        error: { message: string; data: { reason: string; recovery: { hint: string } } };
+      }
+    ).error;
+    expect(result.isError).toBe(true);
+    expect(error.data.reason).toBe('title_too_large');
+    expect(error.data.recovery.hint).toContain('title');
+    expect(error.data.recovery.hint).not.toContain('Shorten the message');
+  });
+
+  it('maps a 4xx with tags-overflow hint to `tags_too_large` with per-field hint', async () => {
+    const svc = freshService();
+    vi.spyOn(svc, 'publish').mockRejectedValue(
+      new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        'ntfy returned HTTP 400 Bad Request: invalid request: tags are too large',
+        { status: 400, body: '{"code":40058,"http":400,"error":"invalid request: tags are too large"}' },
+      ),
+    );
+    const result = await runToolContract(ntfyPublishMessage, { topic: 'alerts', message: 'x' });
+    const error = (
+      result.structuredContent as {
+        error: { message: string; data: { reason: string; recovery: { hint: string } } };
+      }
+    ).error;
+    expect(result.isError).toBe(true);
+    expect(error.data.reason).toBe('tags_too_large');
+    expect(error.data.recovery.hint).toContain('tag');
+    expect(error.data.recovery.hint).not.toContain('Shorten the message');
+  });
+
   it('maps an invalid `attach` URL to `invalid_attachment`, not `payload_too_large`', async () => {
     const svc = freshService();
     vi.spyOn(svc, 'publish').mockRejectedValue(

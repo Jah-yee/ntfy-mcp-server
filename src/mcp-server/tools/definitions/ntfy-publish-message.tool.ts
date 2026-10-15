@@ -388,6 +388,22 @@ export const ntfyPublishMessage = tool('ntfy_publish_message', {
       thrownBy: 'service',
     },
     {
+      reason: 'title_too_large',
+      code: JsonRpcErrorCode.ValidationError,
+      when: 'ntfy rejected the `title` field as exceeding its length limit (error 40057).',
+      recovery:
+        'Shorten the `title` field — ntfy enforces a server-side length limit on titles that is shorter than the message-body limit.',
+      thrownBy: 'service',
+    },
+    {
+      reason: 'tags_too_large',
+      code: JsonRpcErrorCode.ValidationError,
+      when: 'ntfy rejected the `tags` field as exceeding its length limit (error 40058).',
+      recovery:
+        'Shorten or remove tags — ntfy enforces a combined length limit on all tag values; reducing the number or length of tags will resolve this.',
+      thrownBy: 'service',
+    },
+    {
       reason: 'invalid_attachment',
       code: JsonRpcErrorCode.ValidationError,
       when: 'ntfy rejected the `attach` URL as malformed.',
